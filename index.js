@@ -16,11 +16,9 @@ module.exports = (input, options) => {
 
   options = Object.assign({}, options)
 
-  let table = ''
+  const keys = Object.keys(input[0])
 
-  let keys = Object.keys(input[0])
-
-  let titles = keys.map((key, i) => {
+  const titles = keys.map((key, i) => {
     if (Array.isArray(options.columns) && options.columns[i]) {
         if (typeof options.columns[i] === 'string') {
           return options.columns[i]
@@ -34,7 +32,7 @@ module.exports = (input, options) => {
     return sentence(key)
   })
 
-  let widths = input.reduce(
+  const widths = input.reduce(
     (sizes, item) => keys.map(
       (key, i) => Math.max(
         columnWidthMin,
@@ -45,12 +43,12 @@ module.exports = (input, options) => {
     titles.map(t => t.length)
   )
 
-  let alignments = keys.map((key, i) => {
+  const alignments = keys.map((key, i) => {
     if (Array.isArray(options.columns)
       && options.columns[i]
       && options.columns[i].align
     ) {
-      let align = String(options.columns[i].align).toUpperCase()
+      const align = String(options.columns[i].align).toUpperCase()
 
       if (ALIGN.indexOf(align) === -1) {
         throw new TypeError(`Unknown alignment, got ${options.columns[i].align}`)
@@ -60,53 +58,48 @@ module.exports = (input, options) => {
     }
   })
 
+  let table = ''
+
   // header line
-  table += row(titles.map((title, i) => {
-    return pad(alignments[i], widths[i], title)
-  }))
+  table += row(titles.map(
+    (title, i) => pad(alignments[i], widths[i], title)
+  ))
 
   // header separator
-  table += row(alignments.map((align, i) => {
-    return (align === 'LEFT' || align === 'CENTER' ? ':' : '-')
+  table += row(alignments.map(
+    (align, i) => (align === 'LEFT' || align === 'CENTER' ? ':' : '-')
       + repeat('-', widths[i] - 2)
       + (align === 'RIGHT' || align === 'CENTER' ? ':' : '-')
-  }))
+  ))
 
   // table body
-  input.forEach(item => {
-    table += row(keys.map((key, i) => {
-      let v = item[key]
-      let s =  typeof v === 'undefined' ? '' : String(v)
-
-      return pad(alignments[i], widths[i], s)
-    }))
-  })
+  table += input.map(
+    item => row(keys.map(
+      (key, i) => pad(alignments[i], widths[i], toString(item[key]))
+    ))
+  ).join('')
 
   return table
 }
 
-function pad(alignment, target, value){
+function pad(alignment, width, what){
   if (!alignment || alignment === 'LEFT') {
-    return padEnd(value, target)
+    return padEnd(what, width)
   }
 
   if (alignment === 'RIGHT') {
-    return padStart(value, target)
+    return padStart(what, width)
   }
 
   // CENTER
-  let remainder = (target - value.length) % 2
-  let sides = (target - value.length - remainder) / 2
+  const remainder = (width - what.length) % 2
+  const sides = (width - what.length - remainder) / 2
 
-  return repeat(' ', sides) + value + repeat(' ', sides + remainder)
+  return repeat(' ', sides) + what + repeat(' ', sides + remainder)
 }
 
-function row(v){
-  if (Array.isArray(v)) {
-    v = v.join(' | ')
-  }
-
-  return '| ' + v + ' |' + os.EOL
+function row(cells){
+  return '| ' + cells.join(' | ') + ' |' + os.EOL
 }
 
 function repeat(what, times){
@@ -119,4 +112,9 @@ function padStart(what, target, start){
 
 function padEnd(what, target, start){
   return what + repeat(' ', target - what.length)
+}
+
+function toString(v){
+  if (typeof v === 'undefined') return ''
+  return String(v)
 }
